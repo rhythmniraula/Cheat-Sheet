@@ -1,0 +1,297 @@
+Metasploit & Enumeration Cheat Sheet (Detailed + Practical)
+
+
+1. IMPORTING NMAP SCAN INTO METASPLOIT
+
+	Run Nmap Scan & Save Output
+	
+		> nmap -sS -sV -O target -oX windows_server_2012.xml
+	
+		-sS → SYN stealth scan
+		-sV → Detect service versions
+		-O → OS detection
+		-oX → Save output in XML format (required for Metasploit import)
+
+		📌 Why XML?
+		
+		Metasploit database understands XML format for structured data
+
+
+	Start Metasploit Database & Console
+	
+		> service postgresql start
+		> msfconsole
+	
+		PostgreSQL is required for storing scan results, hosts, creds, etc.
+		msfconsole → Launches Metasploit Framework
+
+
+	Workspace Management
+	
+		> workspace
+		> workspace -a win2k12
+		> workspace win2k12
+	
+		workspace → List all workspaces
+		-a → Add new workspace
+		Switching workspace keeps data organized per target
+
+
+	Import Nmap Scan
+	
+		> db_import /root/windows_server_2012.xml
+
+
+	View Discovered Hosts
+	
+		> hosts
+
+
+-------------------------------------------------------------------
+
+
+2. PORT SCANNING WITH AUXILIARY MODULES
+
+	Setup
+	
+		> service postgresql start
+		> msfconsole
+		> workspace -a port_scanning
+
+
+	Search for Port Scan Modules
+	
+		> search portscan
+
+
+	Use TCP Port Scanner
+	
+		> use auxiliary/scanner/portscan/tcp
+		> set RHOSTS 192.168.1.12
+		> set PORTS 80
+		> run
+	
+		RHOSTS → Target IP(s)
+		PORTS → Ports to scan
+		run → Execute module
+
+		📌 Tip:
+		
+		Use RHOSTS (not RHOST) for flexibility (multiple targets)
+
+
+-------------------------------------------------------------------
+
+
+3. FTP ENUMERATION (Port 21)
+
+	Setup Workspace
+	
+		> service postgresql start
+		> msfconsole
+		> workspace -a ftp_enum
+
+
+	Search FTP Modules
+	
+		> search type:auxiliary name:ftp
+
+
+	FTP Version Detection
+	
+		> use auxiliary/scanner/ftp/ftp_version
+		> set RHOSTS target_ip
+		> run
+
+
+	FTP Brute Force Login
+	
+		> use auxiliary/scanner/ftp/ftp_login
+		> set RHOSTS target_ip
+		> set USER_FILE /usr/share/metasploit-framework/data/wordlists/user.txt
+		> set PASS_FILE /usr/share/metasploit-framework/data/wordlists/pw.txt
+		> run
+	
+		USER_FILE → Username wordlist
+		PASS_FILE → Password wordlist
+
+		📌 Output Example:
+		
+		[+] Login successful: sysadmin:654321
+
+
+	Manual FTP Login
+	
+		> ftp target_ip
+		
+		Username: sysadmin
+		Password: 654321
+
+
+-------------------------------------------------------------------
+
+
+4. SMB ENUMERATION (Port 445)
+
+	Setup Workspace
+	
+		> service postgresql start
+		> msfconsole
+		> workspace -a smb_enum
+
+
+	Set Global Target
+	
+		> setg RHOSTS target_ip
+	
+		setg → Sets global variable (used across modules)
+
+
+	SMB User Enumeration
+	
+		> use auxiliary/scanner/smb/smb_enumusers
+		> run
+	
+		📌 Finds:
+		
+		Valid system users
+		Admin accounts (high-value targets)
+
+
+	SMB Login Brute Force
+	
+		> use auxiliary/scanner/smb/smb_login
+		> set USER_FILE users.txt
+		> set PASS_FILE passwords.txt
+		> run
+
+
+	📌 Note:
+	
+	SMB → Native in Windows
+	Samba → SMB implementation in Linux
+
+
+-------------------------------------------------------------------
+
+
+5. WEB SERVER ENUMERATION (Ports 80 / 443)
+
+	Setup Workspace
+	
+		> service postgresql start
+		> msfconsole
+		> workspace -a web_enum
+
+
+	Useful HTTP Modules
+	
+	Directory & File Enumeration
+	
+		> use auxiliary/scanner/http/dir_scanner
+		> use auxiliary/scanner/http/brute_dirs
+		> use auxiliary/scanner/http/files_dir
+
+
+	Apache User Enumeration
+	
+		> use auxiliary/scanner/http/apache_userdir_enum
+
+
+	HTTP Methods & Upload Testing
+	
+		> use auxiliary/scanner/http/http_put
+
+
+	Login Brute Force
+	
+		> use auxiliary/scanner/http/http_login
+		> set USERNAME bob
+		> set PASSWORD 123321
+		> run
+
+
+	Information Gathering
+	
+		> use auxiliary/scanner/http/http_version
+		> use auxiliary/scanner/http/http_header
+		> use auxiliary/scanner/http/robots_txt
+		> use auxiliary/scanner/http/dir_listing
+	
+		http_version → Detect server version
+		http_header → Analyze headers
+		robots_txt → Hidden paths
+		dir_listing → Check directory exposure
+
+
+-------------------------------------------------------------------
+
+
+6. MYSQL ENUMERATION (Port 3306)
+
+	Setup Workspace
+	
+		> service postgresql start
+		> msfconsole
+		> workspace -a mysql_enum
+
+
+	MySQL Modules
+	
+	Version Detection
+	
+		> use auxiliary/scanner/mysql/mysql_version
+
+
+	Login Brute Force
+	
+		> use auxiliary/scanner/mysql/mysql_login
+
+
+	Database Enumeration
+	
+		> use auxiliary/admin/mysql/mysql_enum
+		> use auxiliary/scanner/mysql/mysql_schemadump
+
+
+	Execute SQL Queries
+	
+		> use auxiliary/admin/mysql/mysql_sql
+
+
+	Hash Dumping
+	
+		> use auxiliary/scanner/mysql/mysql_hashdump
+
+
+	File & Directory Enumeration
+	
+		> use auxiliary/scanner/mysql/mysql_file_enum
+		> use auxiliary/scanner/mysql/mysql_writable_dirs
+
+
+	Manual MySQL Login
+	
+		> mysql -h target_ip -u root -p
+		
+		Password: twinkle
+
+
+-------------------------------------------------------------------
+
+
+7. SSH ENUMERATION (Port 22)
+
+	SSH Version Detection
+	
+		> use auxiliary/scanner/ssh/ssh_version
+		> set RHOSTS target_ip
+		> run
+
+
+	SSH Brute Force Login
+	
+		> use auxiliary/scanner/ssh/ssh_login
+		> set USER_FILE users.txt
+		> set PASS_FILE passwords.txt
+		> run
